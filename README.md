@@ -4,7 +4,7 @@ Various reinforcement learning techniques are employed to build a bot for playin
 # Description
 - Bot created with following techniques: dynamic programming
 - A demo notebook is included showing how the code works. 
-- At the moment, works correctly only when the bot goes first (play_bot option 1), but will be updated later for both player and bot as starter. 
+- Works for the bot going first or second. Bot loss rate 0% in both cases. Bot win rate going first is over 99%. Bot win rate going second is over 91%.  
 
 # Packages
 Works with:

@@ -64,35 +64,7 @@ def swap_state(state_int):
     outp = state_to_int(''.join(x))
     return outp
 
-def get_rewards():
-    rewards = np.zeros(np.power(3,9))
-    for i in range(len(rewards)):
-        if is_win(int_to_state(i)):
-            rewards[i] = 1.0
-        if is_loss(int_to_state(i)):
-            rewards[i] = -1.0
-    return rewards
-
-def valid_state(state_int):
-    #takes int
-    state = int_to_state(state_int)
-    state+='012'
-    entries, counts = np.unique(np.asarray(list(state)), return_counts=True)
-    if np.abs(counts[2]-counts[1]) > 1 or counts[1]>counts[2] or counts[0]==1:
-        return False
-    else:
-        return True
-
-def twos_move(state_int):
-    state = int_to_state(state_int)
-    state+='012'
-    entries, counts = np.unique(np.asarray(list(state)), return_counts=True)
-    if counts[1] > counts[2] and np.abs(counts[1]-counts[2]) <= 1 and counts[0] != 0:
-        return True
-    else:
-        return False
-
-def policy_evaluation(V, pi, rewards, GAMMA, DELTA):
+def policy_evaluation(V, pi, rewards, first_or_second, GAMMA, DELTA):
     """
     Returns policy pi from an inputted array of state-value functions.
     There are S states. 
@@ -120,18 +92,34 @@ def policy_evaluation(V, pi, rewards, GAMMA, DELTA):
     while diff>DELTA:
         v = copy.deepcopy(V)
         for i in range(0, len(V)-1):
-            if valid_state(i):
-                if rewards[i] == 0.0:
-                    poss_actions, action_inds = get_possible_actions_for_state(i)
-                    V[i] = np.sum(pi[i, action_inds]*(rewards[poss_actions]+GAMMA*v[poss_actions]))
-            elif twos_move(i):
-                if rewards[i] == 0.0:
-                    poss_2_actions, action_inds = get_2_actions(i)
-                    alt_i = swap_state(i)
-                    if len(poss_2_actions) > 0:
-                    #V[i] = np.sum(pi[alt_i,action_inds]*(rewards[poss_2_actions]+GAMMA*v[poss_2_actions]))
-                        V[i] = 0.5*np.sum((rewards[poss_2_actions]+GAMMA*v[poss_2_actions]))/len(poss_2_actions) + 0.5*np.sum(pi[alt_i,action_inds]*(rewards[poss_2_actions]+GAMMA*v[poss_2_actions]))
-                        #V[i] = np.sum((rewards[poss_2_actions]+GAMMA*v[poss_2_actions]))/len(poss_2_actions)
+            if first_or_second == 1:
+                if valid_state(i):
+                    if rewards[i] == 0.0:
+                        poss_actions, action_inds = get_possible_actions_for_state(i)
+                        V[i] = np.sum(pi[i, action_inds]*(rewards[poss_actions]+GAMMA*v[poss_actions]))
+                elif twos_move(i):
+                    if rewards[i] == 0.0:
+                        poss_2_actions, action_inds = get_2_actions(i)
+                        alt_i = swap_state(i)
+                        if len(poss_2_actions) > 0:
+                        #V[i] = np.sum(pi[alt_i,action_inds]*(rewards[poss_2_actions]+GAMMA*v[poss_2_actions]))
+                            V[i] = 0.5*np.sum((rewards[poss_2_actions]+GAMMA*v[poss_2_actions]))/len(poss_2_actions) + 0.5*np.sum(pi[alt_i,action_inds]*(rewards[poss_2_actions]+GAMMA*v[poss_2_actions]))
+                            #V[i] = np.sum((rewards[poss_2_actions]+GAMMA*v[poss_2_actions]))/len(poss_2_actions)
+                else:
+                    V[i] = 0.0
+            else:
+                if valid_state_second(i):
+                    if rewards[i] == 0.0:
+                        poss_actions, action_inds = get_possible_actions_for_state(i)
+                        V[i] = np.sum(pi[i, action_inds]*(rewards[poss_actions]+GAMMA*v[poss_actions]))
+                elif twos_move_second(i):
+                    if rewards[i] == 0.0:
+                        poss_2_actions, action_inds = get_2_actions(i)
+                        alt_i = swap_state(i)
+                        if len(poss_2_actions) > 0:
+                            #V[i] = np.sum(pi[alt_i,action_inds]*(rewards[poss_2_actions]+GAMMA*v[poss_2_actions]))
+                            #V[i] = 0.5*np.sum((rewards[poss_2_actions]+GAMMA*v[poss_2_actions]))/len(poss_2_actions) + 0.5*np.sum(pi[alt_i,action_inds]*(rewards[poss_2_actions]+GAMMA*v[poss_2_actions]))
+                            V[i] = np.sum((rewards[poss_2_actions]+GAMMA*v[poss_2_actions]))/len(poss_2_actions)
                 else:
                     V[i] = 0.0
         diff = np.linalg.norm(v-V)
@@ -159,12 +147,72 @@ def policy_iteration(GAMMA, DELTA):
         indicating probability for moving to each of the S states.     
     """
     rewards = get_rewards()
+    #Train bot that goes first
+    first_or_second = 1
     V = np.zeros(len(rewards))
-    pi = get_policy_from_V(V, rewards, GAMMA, choose_one=False)
-    old_pi = np.ones_like(pi)
-    while (old_pi==pi).all()==False:
-        old_pi = copy.deepcopy(pi)
-        V = policy_evaluation(V, pi, rewards, GAMMA, DELTA)
-        pi = get_policy_from_V(V, rewards, GAMMA, choose_one=True)
-    return V, pi
+    pi1 = get_policy_from_V(V, rewards, GAMMA, choose_one=False)
+    old_pi = np.ones_like(pi1)
+    while (old_pi==pi1).all()==False:
+        old_pi = copy.deepcopy(pi1)
+        V = policy_evaluation(V, pi1, rewards, first_or_second, GAMMA, DELTA)
+        pi1 = get_policy_from_V(V, rewards, GAMMA, choose_one=True)
 
+    first_or_second = 2
+    V = np.zeros(len(rewards))
+    pi2 = get_policy_from_V(V, rewards, GAMMA, choose_one=False)
+    old_pi = np.ones_like(pi2)
+    while (old_pi==pi2).all()==False:
+        old_pi = copy.deepcopy(pi2)
+        V = policy_evaluation(V, pi2, rewards, first_or_second, GAMMA, DELTA)
+        pi2 = get_policy_from_V(V, rewards, GAMMA, choose_one=True)
+
+    pi = np.concatenate((np.expand_dims(pi1, 0), np.expand_dims(pi2, 0)))
+    
+    return pi
+
+def get_rewards():
+    rewards = np.zeros(np.power(3,9))
+    for i in range(len(rewards)):
+        if is_win(int_to_state(i)):
+            rewards[i] = 1.0
+        if is_loss(int_to_state(i)):
+            rewards[i] = -5.0
+    return rewards
+
+def valid_state(state_int):
+    #takes int
+    state = int_to_state(state_int)
+    state+='012'
+    entries, counts = np.unique(np.asarray(list(state)), return_counts=True)
+    if np.abs(counts[2]-counts[1]) > 1 or counts[1]>counts[2] or counts[0]==1:
+        return False
+    else:
+        return True
+
+def twos_move(state_int):
+    state = int_to_state(state_int)
+    state+='012'
+    entries, counts = np.unique(np.asarray(list(state)), return_counts=True)
+    if counts[1] > counts[2] and np.abs(counts[1]-counts[2]) <= 1 and counts[0] != 1:
+        return True
+    else:
+        return False
+
+def valid_state_second(state_int):
+    #takes int
+    state = int_to_state(state_int)
+    state+='012'
+    entries, counts = np.unique(np.asarray(list(state)), return_counts=True)
+    if np.abs(counts[2]-counts[1]) > 1 or counts[1] >= counts[2] or counts[0]==1:
+        return False
+    else:
+        return True
+
+def twos_move_second(state_int):
+    state = int_to_state(state_int)
+    state+='012'
+    entries, counts = np.unique(np.asarray(list(state)), return_counts=True)
+    if counts[1] == counts[2] and counts[0] != 1:
+        return True
+    else:
+        return False
